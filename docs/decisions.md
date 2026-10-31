@@ -37,3 +37,8 @@ GitHub **public**: `trigger-track-gif` (owner: ratmansky).
 Источник правды на проде: **`GET /api/current_song_details`** (без логина).  
 DOM (player-bar / landing) — запасной и для сверки «как на странице».  
 Локальный клон `Trigger re-diz` для расширения **не** используем.
+
+### Этап B — YouTube выдача
+Показываем **2–3** ролика из поиска `artist + title`.  
+Без Google API key: YouTube InnerTube `youtubei/v1/search`.  
+Клик = выбор (кладём в `chrome.storage.session` для следующих этапов).

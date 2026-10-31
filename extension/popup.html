@@ -8,10 +8,10 @@
   <body>
     <header>
       <strong>Trigger Track GIF</strong>
-      <span class="badge">этап A</span>
+      <span class="badge">этап B</span>
     </header>
 
-    <p class="hint">Сверка с продом: тот же трек, что «сейчас в эфире»?</p>
+    <p class="hint">Трек с Trigger → 2–3 ролика с YouTube. Кликни, чтобы выбрать.</p>
 
     <div id="state" class="state loading">Читаю трек с Trigger…</div>
 
@@ -24,8 +24,16 @@
       </div>
     </div>
 
+    <div id="ytBlock" class="yt-block hidden">
+      <div class="yt-heading">YouTube</div>
+      <div id="ytState" class="yt-state"></div>
+      <div id="ytList" class="yt-list"></div>
+      <div id="picked" class="picked hidden"></div>
+    </div>
+
     <button id="refresh" type="button">Обновить</button>
 
+    <script src="youtube-search.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
