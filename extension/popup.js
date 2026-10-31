@@ -132,7 +132,7 @@ async function selectVideo(video, videos) {
   selectedVideoId = video.videoId;
   renderVideos(videos);
   els.picked.classList.remove("hidden");
-  els.picked.textContent = `Выбрано: ${video.title}`;
+  els.picked.textContent = `Выбрано: ${video.title} — открываю кроп…`;
   await chrome.storage.session.set({
     selectedVideo: {
       ...video,
@@ -146,6 +146,10 @@ async function selectVideo(video, videos) {
         : null,
       pickedAt: Date.now(),
     },
+  });
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL("crop.html"),
+    active: true,
   });
 }
 
