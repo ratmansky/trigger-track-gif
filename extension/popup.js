@@ -47,7 +47,18 @@ let selectedVideo = null;
 let lastVideos = [];
 let gifJob = null;
 
+const trackLoader = createDotsLoader(els.state);
+const ytLoader = createDotsLoader(els.ytState);
+const gifLoader = createDotsLoader(els.gifState);
+const cropLoader = createDotsLoader(els.playerNote);
+const uploadLoader = createDotsLoader(els.gifLink);
+
 function showError(message) {
+  trackLoader.stop();
+  ytLoader.stop();
+  gifLoader.stop();
+  cropLoader.stop();
+  uploadLoader.stop();
   els.state.classList.remove("hidden");
   els.state.classList.add("error");
   els.state.textContent = message;
@@ -198,6 +209,7 @@ const clip = createClipSlider(els.clipSlider, {
 
 const cropPlayer = createCropPlayer(els.ytPlayer, {
   onReady() {
+    cropLoader.stop();
     els.playerNote.classList.add("hidden");
     els.previewCrop.classList.add("hidden");
     previewRange();
@@ -207,10 +219,12 @@ const cropPlayer = createCropPlayer(els.ytPlayer, {
     clip.setPlayhead(now);
   },
   onFail(reason) {
+    cropLoader.stop();
     els.loopBadge.classList.add("hidden");
     clip.setPlayhead(-1);
     els.previewCrop.classList.remove("hidden");
     els.playerNote.classList.remove("hidden");
+    els.playerNote.classList.add("error");
     els.playerNote.textContent = `Плеер в окне не завёлся (${reason}). Ползунки работают, превью — на YouTube.`;
   },
 });
@@ -223,9 +237,10 @@ function showCrop(video) {
   clip.set(start, video.crop?.endSec ?? start + DEFAULT_DURATION);
   els.cropSaved.classList.add("hidden");
   setStep("crop");
-  els.playerNote.classList.add("hidden");
   els.previewCrop.classList.add("hidden");
   els.loopBadge.classList.add("hidden");
+  els.playerNote.classList.remove("error");
+  cropLoader.start("Подключаю плеер YouTube");
   cropPlayer.load(video.videoId, clip.get().start);
 }
 
@@ -252,8 +267,7 @@ async function loadYouTube(track) {
   els.ytBlock.classList.remove("hidden");
   els.ytList.innerHTML = "";
   els.ytState.classList.remove("error");
-  els.ytState.textContent =
-    "Ищу трек, live, клипы и артиста… (мигнёт фоновая вкладка)";
+  ytLoader.start("Ищу видео: трек, live, клипы, артист");
 
   const plan =
     typeof buildYouTubeSearchPlan === "function"
@@ -270,14 +284,16 @@ async function loadYouTube(track) {
     const videos = await searchYouTubeVideos(plan);
     lastVideos = videos;
     if (!videos.length) {
+      ytLoader.stop();
       els.ytState.classList.add("error");
       els.ytState.textContent = "Ничего не нашли по расширенному поиску.";
       return;
     }
     const bits = plan.map((j) => j.reason).filter(Boolean);
-    els.ytState.textContent = `${videos.length} роликов · ${bits.join(" · ")}`;
+    ytLoader.stop(`${videos.length} роликов · ${bits.join(" · ")}`);
     renderVideos(videos);
   } catch (err) {
+    ytLoader.stop();
     els.ytState.classList.add("error");
     els.ytState.textContent = `YouTube поиск не вышел: ${err?.message || err}`;
   }
@@ -286,16 +302,21 @@ async function loadYouTube(track) {
 async function refresh() {
   selectedVideo = null;
   lastVideos = [];
+  ytLoader.stop();
+  gifLoader.stop();
+  cropLoader.stop();
+  uploadLoader.stop();
   document.body.dataset.step = "track";
   els.hint.textContent = "Читаю, что сейчас в эфире на Trigger…";
   els.state.classList.remove("hidden", "error");
-  els.state.textContent = "Читаю трек с Trigger…";
   els.card.classList.add("hidden");
   els.ytBlock.classList.add("hidden");
   els.cropBlock.classList.add("hidden");
   els.gifBlock.classList.add("hidden");
   els.refresh.classList.remove("hidden");
+  els.refresh.disabled = true;
   if (els.badge) els.badge.textContent = "трек";
+  trackLoader.start("Читаю трек с Trigger");
 
   let track = null;
   try {
@@ -305,6 +326,7 @@ async function refresh() {
     if (dom?.ok) {
       track = { ...dom, source: `${dom.source} (API недоступен)` };
     } else {
+      els.refresh.disabled = false;
       showError(
         `Не удалось прочитать трек (${err?.message || err}). Проверь интернет и нажми «Обновить».`,
       );
@@ -312,6 +334,8 @@ async function refresh() {
     }
   }
 
+  trackLoader.stop();
+  els.state.classList.add("hidden");
   showTrack(track);
   const dom = await fetchFromActiveTabDom();
   if (dom?.ok && els.source && track.source?.startsWith("api")) {
@@ -323,6 +347,7 @@ async function refresh() {
   }
 
   await loadYouTube(track);
+  els.refresh.disabled = false;
 }
 
 function fileNameFor(job) {
@@ -345,12 +370,15 @@ function showGifJob(job) {
   els.gifLink.classList.add("hidden");
   els.newGif.classList.add("hidden");
   els.gifInfo.textContent = "";
+  uploadLoader.stop();
 
   if (job.status === "working") {
-    els.gifState.textContent = `${job.progress || "Делаю гифку…"} Откроется вкладка YouTube — не переключайся, окно расширения вернётся само.`;
+    const phase = String(job.progress || "Делаю гифку").replace(/\.+$/, "");
+    gifLoader.start(`${phase} · не переключай вкладку YouTube`);
     return;
   }
 
+  gifLoader.stop();
   els.newGif.classList.remove("hidden");
   if (job.status === "error") {
     els.gifState.classList.add("error");
@@ -477,8 +505,12 @@ els.uploadGif.addEventListener("click", async () => {
   if (!gifJob?.result) return;
   els.uploadGif.disabled = true;
   els.uploadGif.textContent = "Заливаю…";
+  els.gifLink.classList.remove("hidden");
+  els.gifLink.classList.remove("toast-ok");
+  uploadLoader.start("Заливаю гифку на хостинг");
   try {
     const link = await uploadGifHost(gifJob.result.dataUrl, fileNameFor(gifJob));
+    uploadLoader.setText("Вставляю ссылку в чат Trigger");
     try {
       await navigator.clipboard.writeText(link);
     } catch {
@@ -502,9 +534,13 @@ els.uploadGif.addEventListener("click", async () => {
       };
       await chrome.storage.local.set({ gifJob });
     }
+    uploadLoader.stop();
     showGifJob(gifJob);
   } catch (err) {
+    uploadLoader.stop();
     els.gifLink.classList.remove("hidden");
+    els.gifLink.classList.remove("toast-ok");
+    els.gifLink.classList.add("error");
     els.gifLink.textContent = `Не залилось: ${err?.message || err}`;
   } finally {
     els.uploadGif.disabled = false;
@@ -551,19 +587,31 @@ els.saveCrop.addEventListener("click", async () => {
   };
   selectedVideo = { ...selectedVideo, crop };
   await chrome.storage.session.set({ selectedVideo });
-  showGifJob({ status: "working", progress: "Открываю YouTube…" });
+  els.saveCrop.disabled = true;
+  showGifJob({ status: "working", progress: "Открываю YouTube" });
   // The YouTube tab steals focus and closes this popup; the worker reopens it.
-  await chrome.runtime.sendMessage({
-    type: "MAKE_GIF",
-    video: {
-      videoId: selectedVideo.videoId,
-      title: selectedVideo.title,
-      channel: selectedVideo.channel,
-      thumbUrl: selectedVideo.thumbUrl,
-    },
-    crop,
-    track: currentTrack,
-  });
+  try {
+    await chrome.runtime.sendMessage({
+      type: "MAKE_GIF",
+      video: {
+        videoId: selectedVideo.videoId,
+        title: selectedVideo.title,
+        channel: selectedVideo.channel,
+        thumbUrl: selectedVideo.thumbUrl,
+      },
+      crop,
+      track: currentTrack,
+    });
+  } catch (err) {
+    els.saveCrop.disabled = false;
+    showGifJob({
+      status: "error",
+      error: err?.message || String(err),
+      video: selectedVideo,
+      crop,
+      track: currentTrack,
+    });
+  }
 });
 
 els.backToList.addEventListener("click", () => {

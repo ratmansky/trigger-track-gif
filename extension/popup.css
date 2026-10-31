@@ -192,7 +192,10 @@ body[data-step="gif"] .step[data-step="crop"] .step-n {
   margin: 8px 0;
 }
 
-.banner {
+.banner,
+.yt-state,
+.crop-note,
+#gifLink {
   padding: 10px 12px;
   margin-bottom: 10px;
   border-radius: var(--radius);
@@ -200,6 +203,46 @@ body[data-step="gif"] .step[data-step="crop"] .step-n {
   border: 1px solid var(--line);
   color: var(--ink-muted);
   box-shadow: var(--shadow);
+}
+
+.yt-state,
+.crop-note {
+  box-shadow: none;
+}
+
+.crop-note {
+  margin-bottom: 8px;
+}
+
+.is-loading {
+  position: relative;
+  padding-left: 28px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.is-loading::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--ink);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 
 .banner.error,
@@ -314,10 +357,15 @@ body[data-step="gif"] .step[data-step="crop"] .step-n {
   font-size: 12px;
   color: var(--ink-muted);
   margin-bottom: 8px;
+  background: var(--bg);
 }
 
-.yt-state.error {
+.yt-state.error,
+.crop-note.error,
+#gifLink.error {
   color: var(--err-ink);
+  background: var(--err-bg);
+  border-color: transparent;
 }
 
 .yt-list {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Trigger Track GIF",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "GIF from current Trigger track: YouTube clip → crop → GIF → catbox link in Trigger chat.",
   "action": {
     "default_title": "Trigger Track GIF",
