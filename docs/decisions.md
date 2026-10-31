@@ -59,6 +59,10 @@ content script (isolated world) ждёт/пропускает рекламу, с
 Popup при этом закрывается → работой владеет service worker, результат в `chrome.storage.local`,
 по готовности вкладка закрывается и popup открывается снова (`chrome.action.openPopup`).
 
+### UI 0.7 — Figma-kit vibe
+Popup: 8px сетка, ink primary (не purple), step rail 1–4, панели/кнопки primary·secondary·ghost.
+Без отдельного Figma-файла — визуальный язык «стандартного UI kit», заточенный под узкий popup.
+
 ### Этап E — хостинг: catbox.moe (+ запасной pomf)
 Giphy не даёт заливать «через логин на сайте», нужен API-ключ. Выбрали **catbox.moe**.  
 С 2026 анонимный upload часто даёт **412 Invalid uploader** (edge / VPN / без userhash).  

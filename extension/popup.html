@@ -5,34 +5,53 @@
     <title>Trigger Track GIF</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <header>
-      <strong>Trigger Track GIF</strong>
-      <span id="badge" class="badge">трек</span>
-      <span id="version" class="version"></span>
+  <body data-step="track">
+    <header class="app-bar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="brand-text">
+          <strong class="brand-name">Trigger GIF</strong>
+          <span id="version" class="version"></span>
+        </div>
+      </div>
+      <button id="refresh" type="button" class="btn btn-ghost btn-icon" title="Обновить трек">
+        Обновить
+      </button>
     </header>
 
-    <p id="hint" class="hint">Трек → YouTube → кроп. Всё в этом окне.</p>
+    <nav class="steps" id="steps" aria-label="Шаги">
+      <div class="step" data-step="track"><span class="step-n">1</span><span class="step-l">Трек</span></div>
+      <div class="step" data-step="list"><span class="step-n">2</span><span class="step-l">Ролик</span></div>
+      <div class="step" data-step="crop"><span class="step-n">3</span><span class="step-l">Отрезок</span></div>
+      <div class="step" data-step="gif"><span class="step-n">4</span><span class="step-l">Гифка</span></div>
+    </nav>
 
-    <div id="state" class="state loading">Читаю трек с Trigger…</div>
+    <p id="hint" class="hint">Читаю, что сейчас в эфире на Trigger…</p>
 
-    <div id="card" class="card hidden">
-      <img id="cover" alt="" width="64" height="64" />
+    <div id="state" class="banner">Читаю трек с Trigger…</div>
+
+    <section id="card" class="track-row hidden">
+      <img id="cover" alt="" width="48" height="48" />
       <div class="meta">
         <div id="title" class="title"></div>
         <div id="artist" class="artist"></div>
         <div id="source" class="source"></div>
       </div>
-    </div>
+    </section>
 
-    <div id="ytBlock" class="yt-block hidden">
-      <div class="yt-heading">YouTube</div>
+    <section id="ytBlock" class="panel hidden">
+      <div class="panel-head">
+        <h2 class="panel-title">Выбери ролик</h2>
+        <span id="badge" class="sr-only">ролик</span>
+      </div>
       <div id="ytState" class="yt-state"></div>
       <div id="ytList" class="yt-list"></div>
-    </div>
+    </section>
 
-    <div id="cropBlock" class="crop-block hidden">
-      <div class="yt-heading">Кроп</div>
+    <section id="cropBlock" class="panel hidden">
+      <div class="panel-head">
+        <h2 class="panel-title">Отрезок</h2>
+      </div>
       <div class="crop-meta tight-meta">
         <div id="cropTitle" class="crop-title"></div>
         <div id="cropChannel" class="crop-channel"></div>
@@ -44,34 +63,36 @@
           allow="autoplay; encrypted-media"
           referrerpolicy="strict-origin-when-cross-origin"
         ></iframe>
-        <div id="loopBadge" class="loop-badge hidden">луп = твоя гифка</div>
+        <div id="loopBadge" class="loop-badge hidden">луп = гифка</div>
       </div>
       <p id="playerNote" class="crop-note hidden"></p>
       <div id="clipSlider"></div>
-      <p class="hint tight">Тяни начало и конец. В окне по кругу крутится ровно то, что будет в гифке (макс 6 сек). Полоска сверху — где в песне.</p>
-      <div class="crop-actions">
-        <button id="previewCrop" type="button">Превью на YouTube</button>
-        <button id="saveCrop" type="button" class="primary">Сделать гифку</button>
-        <button id="backToList" type="button" class="ghost">← другой ролик</button>
+      <p class="hint tight">
+        Тяни края. В превью крутится ровно то, что попадёт в гифку (макс 6 сек).
+      </p>
+      <div class="actions">
+        <button id="saveCrop" type="button" class="btn btn-primary">Сделать гифку</button>
+        <button id="previewCrop" type="button" class="btn btn-secondary">Превью на YouTube</button>
+        <button id="backToList" type="button" class="btn btn-ghost">Другой ролик</button>
       </div>
-      <p id="cropSaved" class="picked hidden"></p>
-    </div>
+      <p id="cropSaved" class="toast toast-ok hidden"></p>
+    </section>
 
-    <div id="gifBlock" class="crop-block hidden">
-      <div class="yt-heading">Гифка</div>
-      <div id="gifState" class="state"></div>
+    <section id="gifBlock" class="panel hidden">
+      <div class="panel-head">
+        <h2 class="panel-title">Гифка</h2>
+      </div>
+      <div id="gifState" class="banner"></div>
       <img id="gifImg" class="gif-img hidden" alt="" />
       <div id="gifInfo" class="source"></div>
-      <div id="gifActions" class="crop-actions hidden">
-        <button id="uploadGif" type="button" class="primary">Залить и вставить в чат</button>
-        <button id="downloadGif" type="button">Скачать .gif</button>
-        <button id="redoCrop" type="button" class="ghost">← поменять отрезок</button>
+      <div id="gifActions" class="actions hidden">
+        <button id="uploadGif" type="button" class="btn btn-primary">Залить и вставить в чат</button>
+        <button id="downloadGif" type="button" class="btn btn-secondary">Скачать .gif</button>
+        <button id="redoCrop" type="button" class="btn btn-ghost">Поменять отрезок</button>
       </div>
-      <p id="gifLink" class="picked hidden"></p>
-      <button id="newGif" type="button" class="ghost-wide hidden">Новая гифка</button>
-    </div>
-
-    <button id="refresh" type="button">Обновить трек</button>
+      <p id="gifLink" class="toast toast-ok hidden"></p>
+      <button id="newGif" type="button" class="btn btn-ghost btn-block hidden">Новая гифка</button>
+    </section>
 
     <script src="youtube-search.js"></script>
     <script src="crop-player.js"></script>

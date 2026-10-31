@@ -141,19 +141,18 @@ function searchQueryFor(track) {
 
 function setStep(step) {
   if (step !== "crop") cropPlayer.stop();
+  document.body.dataset.step = step === "list" ? "list" : step;
   els.ytBlock.classList.toggle("hidden", step !== "list");
   els.cropBlock.classList.toggle("hidden", step !== "crop");
   els.gifBlock.classList.toggle("hidden", step !== "gif");
   els.refresh.classList.toggle("hidden", step === "gif");
+  if (els.badge) els.badge.textContent = step;
   if (step === "list") {
-    els.badge.textContent = "ролик";
     els.hint.textContent = "Кликни ролик — кроп откроется здесь же.";
   } else if (step === "crop") {
-    els.badge.textContent = "отрезок";
-    els.hint.textContent = "Выставь отрезок. Превью откроет YouTube с нужной секунды.";
+    els.hint.textContent = "Выставь отрезок. В превью крутится будущая гифка.";
   } else if (step === "gif") {
-    els.badge.textContent = "гифка";
-    els.hint.textContent = "Посмотри гифку. Ок → зальём и вставим ссылку в чат Trigger.";
+    els.hint.textContent = "Ок → зальём и вставим ссылку в чат Trigger.";
   }
 }
 
@@ -272,6 +271,8 @@ async function loadYouTube(track) {
 async function refresh() {
   selectedVideo = null;
   lastVideos = [];
+  document.body.dataset.step = "track";
+  els.hint.textContent = "Читаю, что сейчас в эфире на Trigger…";
   els.state.classList.remove("hidden", "error");
   els.state.textContent = "Читаю трек с Trigger…";
   els.card.classList.add("hidden");
@@ -279,7 +280,7 @@ async function refresh() {
   els.cropBlock.classList.add("hidden");
   els.gifBlock.classList.add("hidden");
   els.refresh.classList.remove("hidden");
-  els.badge.textContent = "трек";
+  if (els.badge) els.badge.textContent = "трек";
 
   try {
     const track = await fetchFromApi();
