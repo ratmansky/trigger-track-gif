@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Trigger Track GIF",
+  "version": "0.0.1",
+  "description": "GIF from current Trigger track via YouTube crop → Giphy → chat (stub).",
+  "action": {
+    "default_title": "Trigger Track GIF",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://triggerfm.online/*",
+    "https://*.triggerfm.online/*"
+  ]
+}
