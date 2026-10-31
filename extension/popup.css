@@ -1,0 +1,95 @@
+body {
+  margin: 12px;
+  min-width: 280px;
+  font: 13px/1.4 system-ui, sans-serif;
+  color: #1a1a1a;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eee;
+  color: #555;
+}
+
+.hint {
+  margin: 0 0 10px;
+  color: #666;
+  font-size: 12px;
+}
+
+.state {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f5f5f5;
+  margin-bottom: 10px;
+}
+
+.state.error {
+  background: #fde8e8;
+  color: #8a1f1f;
+}
+
+.state.hidden {
+  display: none;
+}
+
+.card {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.card.hidden {
+  display: none;
+}
+
+#cover {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #ddd;
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.artist {
+  color: #444;
+  margin-top: 2px;
+}
+
+.source {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #888;
+}
+
+button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f7f7f7;
+}

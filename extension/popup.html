@@ -3,19 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <title>Trigger Track GIF</title>
-    <style>
-      body {
-        font: 13px/1.4 system-ui, sans-serif;
-        margin: 12px;
-        min-width: 220px;
-      }
-      code {
-        font-size: 12px;
-      }
-    </style>
+    <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <strong>Trigger Track GIF</strong>
-    <p>Stub 0.0.1 — каркас. Spike YouTube: см. <code>docs/spike-youtube-no-helper.md</code>.</p>
+    <header>
+      <strong>Trigger Track GIF</strong>
+      <span class="badge">этап A</span>
+    </header>
+
+    <p class="hint">Сверка с продом: тот же трек, что «сейчас в эфире»?</p>
+
+    <div id="state" class="state loading">Читаю трек с Trigger…</div>
+
+    <div id="card" class="card hidden">
+      <img id="cover" alt="" width="64" height="64" />
+      <div class="meta">
+        <div id="title" class="title"></div>
+        <div id="artist" class="artist"></div>
+        <div id="source" class="source"></div>
+      </div>
+    </div>
+
+    <button id="refresh" type="button">Обновить</button>
+
+    <script src="popup.js"></script>
   </body>
 </html>

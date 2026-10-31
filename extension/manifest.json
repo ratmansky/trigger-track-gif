@@ -1,15 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Trigger Track GIF",
-  "version": "0.0.1",
-  "description": "GIF from current Trigger track via YouTube crop → Giphy → chat (stub).",
+  "version": "0.1.0",
+  "description": "GIF from current Trigger track via YouTube crop → Giphy → chat.",
   "action": {
     "default_title": "Trigger Track GIF",
     "default_popup": "popup.html"
   },
-  "permissions": ["storage"],
+  "permissions": ["tabs"],
   "host_permissions": [
     "https://triggerfm.online/*",
     "https://*.triggerfm.online/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://triggerfm.online/*",
+        "https://*.triggerfm.online/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
   ]
 }
