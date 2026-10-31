@@ -60,6 +60,11 @@ content script (isolated world) ждёт/пропускает рекламу, с
 Popup при этом закрывается → работой владеет service worker, результат в `chrome.storage.local`,
 по готовности вкладка закрывается и popup открывается снова (`chrome.action.openPopup`).
 
+### Capture fix 0.7.5 — «Видео встало»
+Live `requestVideoFrameCallback` часто отваливается → seek по кадрам (pause → seek → draw).  
+Результат пишем в `chrome.storage.local.gifCaptureResult` (не тащим огромный dataUrl через executeScript).  
+Во время съёмки держим вкладку YouTube активной; popup открываем только в конце.
+
 ### UI 0.7 — Figma-kit vibe
 Popup: 8px сетка, ink primary (не purple), step rail 1–4, панели/кнопки primary·secondary·ghost.
 Без отдельного Figma-файла — визуальный язык «стандартного UI kit», заточенный под узкий popup.

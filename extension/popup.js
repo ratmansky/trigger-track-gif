@@ -640,7 +640,26 @@ document.getElementById("version").textContent =
 
 async function init() {
   const { gifJob: job } = await chrome.storage.local.get("gifJob");
-  const fresh = job && Date.now() - (job.updatedAt || 0) < JOB_STALE_MS;
+  const age = job ? Date.now() - (job.updatedAt || job.startedAt || 0) : 0;
+  const fresh = job && age < JOB_STALE_MS;
+  if (job?.status === "working" && !fresh) {
+    await chrome.storage.local.set({
+      gifJob: {
+        ...job,
+        status: "error",
+        error:
+          "Сборка прервалась (Chrome усыпил процесс). Нажми «Поменять отрезок» и сделай гифку ещё раз — вкладку YouTube не трогай.",
+        updatedAt: Date.now(),
+      },
+    });
+    const { gifJob: stalled } = await chrome.storage.local.get("gifJob");
+    if (stalled.track) showTrack(stalled.track);
+    selectedVideo = stalled.video
+      ? { ...stalled.video, crop: stalled.crop }
+      : null;
+    showGifJob(stalled);
+    return;
+  }
   if (job && (job.status !== "working" || fresh)) {
     if (job.track) showTrack(job.track);
     selectedVideo = job.video ? { ...job.video, crop: job.crop } : null;

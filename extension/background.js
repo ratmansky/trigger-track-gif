@@ -209,11 +209,18 @@ async function restoreQualityPref(tabId, pref) {
   }
 }
 
+async function readCaptureResult() {
+  const { gifCaptureResult } = await chrome.storage.local.get("gifCaptureResult");
+  await chrome.storage.local.remove("gifCaptureResult");
+  return gifCaptureResult || null;
+}
+
 async function makeGif({ video, crop, track }) {
+  await chrome.storage.local.remove("gifCaptureResult");
   await chrome.storage.local.set({
     gifJob: {
       status: "working",
-      progress: "Открываю YouTube…",
+      progress: "Открываю YouTube",
       video,
       crop,
       track,
@@ -223,7 +230,7 @@ async function makeGif({ video, crop, track }) {
   });
 
   // Keep the service worker awake while we wait on the tab.
-  const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20000);
+  const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 15000);
   let tab = null;
   let qualityPref = null;
   try {
@@ -232,24 +239,52 @@ async function makeGif({ video, crop, track }) {
       url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}&t=${t}s`,
       active: true,
     });
-    await chrome.tabs.update(tab.id, { muted: true });
-    await waitTabComplete(tab.id, 30000);
+    await chrome.windows.update(tab.windowId, { focused: true });
+    await chrome.tabs.update(tab.id, { muted: true, active: true });
+    await waitTabComplete(tab.id, 45000);
+    // Let the player boot before we poke it.
+    await new Promise((r) => setTimeout(r, 1200));
     qualityPref = await forceLowQuality(tab.id);
 
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["vendor/gifenc.js", "capture.js"],
-    });
-    const [{ result }] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      args: [{ start: crop.startSec, duration: crop.durationSec }],
-      func: (opts) => window.__ttgCapture(opts),
-    });
+    // Stay on the YouTube tab for the whole capture (no popup mid-flight).
+    const focusPulse = setInterval(() => {
+      chrome.tabs.update(tab.id, { active: true }).catch(() => {});
+    }, 4000);
 
-    if (!result?.ok) {
-      throw new Error(result?.error || "Пустой ответ из вкладки YouTube");
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["vendor/gifenc.js", "capture.js"],
+      });
+      await setJob({ progress: "Снимаю кадры (можно не трогать вкладку)" });
+      const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        args: [{ start: crop.startSec, duration: crop.durationSec }],
+        func: (opts) => window.__ttgCapture(opts),
+      });
+
+      const stored = await readCaptureResult();
+      const payload = stored || result;
+      if (!payload?.ok) {
+        throw new Error(
+          payload?.error || result?.error || "Пустой ответ из вкладки YouTube",
+        );
+      }
+      // Prefer storage payload (has dataUrl); result may only be a stub.
+      const gifResult = stored?.ok
+        ? stored
+        : result?.dataUrl
+          ? result
+          : null;
+      if (!gifResult?.dataUrl) {
+        throw new Error(
+          "Гифка собралась, но не сохранилась. Попробуй ещё раз / Reload расширения.",
+        );
+      }
+      await setJob({ status: "done", progress: "", result: gifResult });
+    } finally {
+      clearInterval(focusPulse);
     }
-    await setJob({ status: "done", progress: "", result });
   } catch (err) {
     await setJob({ status: "error", error: err?.message || String(err) });
   } finally {
@@ -272,9 +307,13 @@ async function makeGif({ video, crop, track }) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "MAKE_GIF") {
-    makeGif(msg);
-    sendResponse({ ok: true });
-    return false;
+    // Keep the worker alive for the async job (MV3).
+    makeGif(msg)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) =>
+        sendResponse({ ok: false, error: err?.message || String(err) }),
+      );
+    return true;
   }
   if (msg?.type === "GIF_PROGRESS") {
     setJob({ progress: msg.text });
