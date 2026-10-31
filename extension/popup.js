@@ -135,10 +135,6 @@ async function fetchFromActiveTabDom() {
   }
 }
 
-function searchQueryFor(track) {
-  return [track.artist, track.title].filter(Boolean).join(" ").trim();
-}
-
 function setStep(step) {
   if (step !== "crop") cropPlayer.stop();
   document.body.dataset.step = step === "list" ? "list" : step;
@@ -170,11 +166,18 @@ function renderVideos(videos) {
         <div class="yt-title"></div>
         <div class="yt-channel"></div>
       </div>
+      <span class="yt-reason"></span>
     `;
     const img = btn.querySelector(".yt-thumb");
     img.src = video.thumbUrl || "";
     btn.querySelector(".yt-title").textContent = video.title || video.videoId;
     btn.querySelector(".yt-channel").textContent = video.channel || "YouTube";
+    const reasonEl = btn.querySelector(".yt-reason");
+    if (video.reason) {
+      reasonEl.textContent = video.reason;
+    } else {
+      reasonEl.remove();
+    }
     btn.addEventListener("click", () => selectVideo(video));
     els.ytList.appendChild(btn);
   }
@@ -249,18 +252,20 @@ async function loadYouTube(track) {
   els.ytBlock.classList.remove("hidden");
   els.ytList.innerHTML = "";
   els.ytState.classList.remove("error");
-  els.ytState.textContent = "Ищу на YouTube… (мигнёт фоновая вкладка — так надо)";
+  els.ytState.textContent =
+    "Ищу трек, live, клипы и артиста… (мигнёт фоновая вкладка)";
 
-  const query = searchQueryFor(track);
+  const plan = buildYouTubeSearchPlan(track);
   try {
-    const videos = await searchYouTubeVideos(query, 3);
+    const videos = await searchYouTubeVideos(plan);
     lastVideos = videos;
     if (!videos.length) {
       els.ytState.classList.add("error");
-      els.ytState.textContent = `Ничего не нашли по «${query}».`;
+      els.ytState.textContent = "Ничего не нашли по расширенному поиску.";
       return;
     }
-    els.ytState.textContent = `По запросу «${query}» — ${videos.length} из выдачи:`;
+    const bits = plan.map((j) => j.reason).filter(Boolean);
+    els.ytState.textContent = `${videos.length} роликов · ${bits.join(" · ")}`;
     renderVideos(videos);
   } catch (err) {
     els.ytState.classList.add("error");

@@ -37,20 +37,32 @@ function waitTabComplete(tabId, timeoutMs = 20000) {
   });
 }
 
-async function searchViaYouTubeTab(query, limit) {
+/**
+ * One background YouTube tab → several InnerTube searches → merge unique videos.
+ * `queries`: [{ query, limit, reason }]
+ */
+async function searchViaYouTubeTab(queries) {
+  const jobs = (Array.isArray(queries) ? queries : [])
+    .map((j) => ({
+      query: String(j?.query || "").trim(),
+      limit: Math.max(1, Number(j?.limit) || 2),
+      reason: j?.reason || "",
+    }))
+    .filter((j) => j.query);
+  if (!jobs.length) return [];
+
   const tab = await chrome.tabs.create({ url: YT_HOME, active: false });
   try {
     await waitTabComplete(tab.id);
-    // Give the page a beat to settle cookies / boot.
     await new Promise((r) => setTimeout(r, 400));
 
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       world: "MAIN",
-      args: [query, limit, YT_SEARCH],
-      func: async (q, max, searchUrl) => {
+      args: [jobs, YT_SEARCH],
+      func: async (searchJobs, searchUrl) => {
         function walk(node, out) {
-          if (!node || out.length >= 12) return;
+          if (!node || out.length >= 16) return;
           if (Array.isArray(node)) {
             for (const item of node) walk(item, out);
             return;
@@ -78,37 +90,49 @@ async function searchViaYouTubeTab(query, limit) {
           for (const value of Object.values(node)) walk(value, out);
         }
 
-        const res = await fetch(searchUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            context: {
-              client: {
-                clientName: "WEB",
-                clientVersion: "2.20260101.00.00",
-                hl: "en",
-                gl: "US",
+        async function runOne(q, max) {
+          const res = await fetch(searchUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              context: {
+                client: {
+                  clientName: "WEB",
+                  clientVersion: "2.20260101.00.00",
+                  hl: "en",
+                  gl: "US",
+                },
               },
-            },
-            query: q,
-          }),
-        });
-        if (!res.ok) {
-          throw new Error(`YouTube search ${res.status}`);
+              query: q,
+            }),
+          });
+          if (!res.ok) throw new Error(`YouTube search ${res.status}`);
+          const data = await res.json();
+          const found = [];
+          walk(data, found);
+          const seen = new Set();
+          const unique = [];
+          for (const item of found) {
+            if (seen.has(item.videoId)) continue;
+            seen.add(item.videoId);
+            unique.push(item);
+            if (unique.length >= max) break;
+          }
+          return unique;
         }
-        const data = await res.json();
-        const found = [];
-        walk(data, found);
-        const seen = new Set();
-        const unique = [];
-        for (const item of found) {
-          if (seen.has(item.videoId)) continue;
-          seen.add(item.videoId);
-          unique.push(item);
-          if (unique.length >= max) break;
+
+        const merged = [];
+        const globalSeen = new Set();
+        for (const job of searchJobs) {
+          const batch = await runOne(job.query, job.limit);
+          for (const item of batch) {
+            if (globalSeen.has(item.videoId)) continue;
+            globalSeen.add(item.videoId);
+            merged.push({ ...item, reason: job.reason || "", query: job.query });
+          }
         }
-        return unique;
+        return merged;
       },
     });
 
@@ -257,7 +281,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return false;
   }
   if (msg?.type !== "SEARCH_YOUTUBE") return false;
-  searchViaYouTubeTab(msg.query || "", msg.limit || 3)
+  const queries = Array.isArray(msg.queries)
+    ? msg.queries
+    : [{ query: msg.query || "", limit: msg.limit || 3, reason: "" }];
+  searchViaYouTubeTab(queries)
     .then((videos) => sendResponse({ ok: true, videos }))
     .catch((err) =>
       sendResponse({ ok: false, error: err?.message || String(err) }),

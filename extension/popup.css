@@ -307,6 +307,19 @@ body[data-step="gif"] .step[data-step="crop"] .step-n {
   transition: border-color 0.12s ease, background 0.12s ease;
 }
 
+.yt-reason {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ecece8;
+  color: var(--ink-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .yt-item:hover {
   border-color: #cfcfc9;
   background: #fff;
