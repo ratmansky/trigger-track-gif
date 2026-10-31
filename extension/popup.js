@@ -255,7 +255,17 @@ async function loadYouTube(track) {
   els.ytState.textContent =
     "Ищу трек, live, клипы и артиста… (мигнёт фоновая вкладка)";
 
-  const plan = buildYouTubeSearchPlan(track);
+  const plan =
+    typeof buildYouTubeSearchPlan === "function"
+      ? buildYouTubeSearchPlan(track)
+      : [
+          {
+            query: [track.artist, track.title].filter(Boolean).join(" ").trim(),
+            limit: 6,
+            reason: "трек",
+          },
+        ].filter((j) => j.query);
+
   try {
     const videos = await searchYouTubeVideos(plan);
     lastVideos = videos;
@@ -287,31 +297,32 @@ async function refresh() {
   els.refresh.classList.remove("hidden");
   if (els.badge) els.badge.textContent = "трек";
 
+  let track = null;
   try {
-    const track = await fetchFromApi();
-    showTrack(track);
-
-    const dom = await fetchFromActiveTabDom();
-    if (dom?.ok && els.source) {
-      const same =
-        dom.artist === track.artist && dom.title === track.title
-          ? "совпадает со страницей"
-          : `на странице сейчас: ${dom.artist} — ${dom.title}`;
-      els.source.textContent = `${track.source} · ${same}`;
-    }
-
-    await loadYouTube(track);
+    track = await fetchFromApi();
   } catch (err) {
     const dom = await fetchFromActiveTabDom();
     if (dom?.ok) {
-      showTrack({ ...dom, source: `${dom.source} (API недоступен)` });
-      await loadYouTube(dom);
+      track = { ...dom, source: `${dom.source} (API недоступен)` };
+    } else {
+      showError(
+        `Не удалось прочитать трек (${err?.message || err}). Проверь интернет и нажми «Обновить».`,
+      );
       return;
     }
-    showError(
-      `Не удалось прочитать трек (${err?.message || err}). Проверь интернет и нажми «Обновить».`,
-    );
   }
+
+  showTrack(track);
+  const dom = await fetchFromActiveTabDom();
+  if (dom?.ok && els.source && track.source?.startsWith("api")) {
+    const same =
+      dom.artist === track.artist && dom.title === track.title
+        ? "совпадает со страницей"
+        : `на странице сейчас: ${dom.artist} — ${dom.title}`;
+    els.source.textContent = `${track.source} · ${same}`;
+  }
+
+  await loadYouTube(track);
 }
 
 function fileNameFor(job) {
