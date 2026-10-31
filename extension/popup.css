@@ -263,3 +263,156 @@ button#refresh:hover {
   color: #1f5a1f;
   font-size: 12px;
 }
+
+.gif-img {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  background: #000;
+}
+
+#gifInfo {
+  margin-bottom: 8px;
+}
+
+.picked a {
+  color: inherit;
+  word-break: break-all;
+}
+
+button.ghost-wide {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tight-meta {
+  margin-bottom: 6px;
+}
+
+.player-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+
+.player-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.loop-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.clip-slider {
+  margin-bottom: 4px;
+}
+
+.clip-overview input {
+  width: 100%;
+  height: 12px;
+  margin: 0 0 6px;
+  accent-color: #888;
+}
+
+.clip-fine {
+  position: relative;
+  height: 28px;
+}
+
+.clip-track {
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  right: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: #e5e5e5;
+}
+
+.clip-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: #1a1a1a;
+}
+
+.clip-playhead {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: #e0245e;
+}
+
+/* Two native ranges stacked; only their thumbs take the pointer. */
+.clip-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.clip-thumb::-webkit-slider-runnable-track {
+  background: none;
+  height: 28px;
+}
+
+.clip-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 26px;
+  margin-top: 1px;
+  border: 2px solid #1a1a1a;
+  border-radius: 5px;
+  background: #fff;
+  cursor: ew-resize;
+}
+
+.clip-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+
+.clip-l-len {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.version {
+  margin-left: auto;
+  font-size: 11px;
+  color: #999;
+}

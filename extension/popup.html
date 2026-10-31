@@ -8,7 +8,8 @@
   <body>
     <header>
       <strong>Trigger Track GIF</strong>
-      <span id="badge" class="badge">этап B</span>
+      <span id="badge" class="badge">трек</span>
+      <span id="version" class="version"></span>
     </header>
 
     <p id="hint" class="hint">Трек → YouTube → кроп. Всё в этом окне.</p>
@@ -32,38 +33,49 @@
 
     <div id="cropBlock" class="crop-block hidden">
       <div class="yt-heading">Кроп</div>
-      <div class="crop-picked">
-        <img id="cropThumb" class="crop-thumb" alt="" width="120" height="68" />
-        <div class="crop-meta">
-          <div id="cropTitle" class="crop-title"></div>
-          <div id="cropChannel" class="crop-channel"></div>
-        </div>
+      <div class="crop-meta tight-meta">
+        <div id="cropTitle" class="crop-title"></div>
+        <div id="cropChannel" class="crop-channel"></div>
       </div>
-      <p class="crop-note">
-        Плеер YouTube в окне расширения не работает (ошибка 153). Превью — на сайте YouTube с нужной секунды.
-      </p>
-      <div class="crop-fields">
-        <label class="field">
-          <span>Начало (сек)</span>
-          <input id="startSec" type="number" min="0" step="0.5" value="0" />
-        </label>
-        <label class="field">
-          <span>Длина (сек)</span>
-          <input id="durationSec" type="number" min="1" max="8" step="0.5" value="3" />
-        </label>
+      <div class="player-wrap">
+        <iframe
+          id="ytPlayer"
+          title="YouTube"
+          allow="autoplay; encrypted-media"
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+        <div id="loopBadge" class="loop-badge hidden">луп = твоя гифка</div>
       </div>
-      <p class="hint tight">Для гифки лучше 2–6 сек, макс 8.</p>
+      <p id="playerNote" class="crop-note hidden"></p>
+      <div id="clipSlider"></div>
+      <p class="hint tight">Тяни начало и конец. В окне по кругу крутится ровно то, что будет в гифке (макс 6 сек). Полоска сверху — где в песне.</p>
       <div class="crop-actions">
         <button id="previewCrop" type="button">Превью на YouTube</button>
-        <button id="saveCrop" type="button" class="primary">Ок, этот отрезок</button>
+        <button id="saveCrop" type="button" class="primary">Сделать гифку</button>
         <button id="backToList" type="button" class="ghost">← другой ролик</button>
       </div>
       <p id="cropSaved" class="picked hidden"></p>
     </div>
 
+    <div id="gifBlock" class="crop-block hidden">
+      <div class="yt-heading">Гифка</div>
+      <div id="gifState" class="state"></div>
+      <img id="gifImg" class="gif-img hidden" alt="" />
+      <div id="gifInfo" class="source"></div>
+      <div id="gifActions" class="crop-actions hidden">
+        <button id="uploadGif" type="button" class="primary">Залить и вставить в чат</button>
+        <button id="downloadGif" type="button">Скачать .gif</button>
+        <button id="redoCrop" type="button" class="ghost">← поменять отрезок</button>
+      </div>
+      <p id="gifLink" class="picked hidden"></p>
+      <button id="newGif" type="button" class="ghost-wide hidden">Новая гифка</button>
+    </div>
+
     <button id="refresh" type="button">Обновить трек</button>
 
     <script src="youtube-search.js"></script>
+    <script src="crop-player.js"></script>
+    <script src="clip-slider.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

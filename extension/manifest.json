@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Trigger Track GIF",
-  "version": "0.3.1",
-  "description": "GIF from current Trigger track via YouTube crop → Giphy → chat.",
+  "version": "0.6.0",
+  "description": "GIF from current Trigger track: YouTube clip → crop → GIF → catbox link in Trigger chat.",
   "action": {
     "default_title": "Trigger Track GIF",
     "default_popup": "popup.html"
@@ -10,12 +10,21 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["tabs", "storage", "scripting"],
+  "permissions": [
+    "tabs",
+    "storage",
+    "unlimitedStorage",
+    "scripting",
+    "declarativeNetRequest"
+  ],
   "host_permissions": [
     "https://triggerfm.online/*",
     "https://*.triggerfm.online/*",
     "https://www.youtube.com/*",
-    "https://youtube.com/*"
+    "https://youtube.com/*",
+    "https://catbox.moe/*",
+    "https://pomf.lain.la/*",
+    "https://pomf2.lain.la/*"
   ],
   "content_scripts": [
     {
@@ -23,7 +32,9 @@
         "https://triggerfm.online/*",
         "https://*.triggerfm.online/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

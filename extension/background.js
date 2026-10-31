@@ -125,7 +125,137 @@ async function searchViaYouTubeTab(query, limit) {
   }
 }
 
+// --- GIF job: capture frames in a real YouTube tab, keep result in storage.
+// The popup closes as soon as the tab opens, so the worker owns the job and
+// reopens the popup when it is done.
+
+async function setJob(patch) {
+  const { gifJob } = await chrome.storage.local.get("gifJob");
+  const next = { ...(gifJob || {}), ...patch, updatedAt: Date.now() };
+  await chrome.storage.local.set({ gifJob: next });
+  return next;
+}
+
+// GIF is 320px wide → 360p ("medium") is plenty and loads much faster than
+// the 720p+ a full-size watch tab picks. setPlaybackQualityRange also saves
+// the choice in localStorage for a year, so we put the user's own value back.
+const CAPTURE_QUALITY = "medium";
+const QUALITY_KEY = "yt-player-quality";
+
+async function forceLowQuality(tabId) {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      args: [CAPTURE_QUALITY, QUALITY_KEY],
+      func: async (quality, key) => {
+        const saved = localStorage.getItem(key);
+        for (let i = 0; i < 50; i++) {
+          const player = document.getElementById("movie_player");
+          if (player?.setPlaybackQualityRange) {
+            player.setPlaybackQualityRange(quality, quality);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        return { saved };
+      },
+    });
+    return result;
+  } catch {
+    // Not fatal — capture still works at whatever quality YouTube picks.
+    return null;
+  }
+}
+
+async function restoreQualityPref(tabId, pref) {
+  if (!pref) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      args: [QUALITY_KEY, pref.saved],
+      func: (key, saved) => {
+        if (saved == null) localStorage.removeItem(key);
+        else localStorage.setItem(key, saved);
+      },
+    });
+  } catch {
+    /* tab already gone */
+  }
+}
+
+async function makeGif({ video, crop, track }) {
+  await chrome.storage.local.set({
+    gifJob: {
+      status: "working",
+      progress: "Открываю YouTube…",
+      video,
+      crop,
+      track,
+      startedAt: Date.now(),
+      updatedAt: Date.now(),
+    },
+  });
+
+  // Keep the service worker awake while we wait on the tab.
+  const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 20000);
+  let tab = null;
+  let qualityPref = null;
+  try {
+    const t = Math.floor(crop.startSec);
+    tab = await chrome.tabs.create({
+      url: `https://www.youtube.com/watch?v=${encodeURIComponent(video.videoId)}&t=${t}s`,
+      active: true,
+    });
+    await chrome.tabs.update(tab.id, { muted: true });
+    await waitTabComplete(tab.id, 30000);
+    qualityPref = await forceLowQuality(tab.id);
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["vendor/gifenc.js", "capture.js"],
+    });
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      args: [{ start: crop.startSec, duration: crop.durationSec }],
+      func: (opts) => window.__ttgCapture(opts),
+    });
+
+    if (!result?.ok) {
+      throw new Error(result?.error || "Пустой ответ из вкладки YouTube");
+    }
+    await setJob({ status: "done", progress: "", result });
+  } catch (err) {
+    await setJob({ status: "error", error: err?.message || String(err) });
+  } finally {
+    clearInterval(keepAlive);
+    if (tab) {
+      await restoreQualityPref(tab.id, qualityPref);
+      try {
+        await chrome.tabs.remove(tab.id);
+      } catch {
+        /* user closed it */
+      }
+    }
+    try {
+      await chrome.action.openPopup();
+    } catch {
+      /* no focused window — user opens the popup by hand */
+    }
+  }
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "MAKE_GIF") {
+    makeGif(msg);
+    sendResponse({ ok: true });
+    return false;
+  }
+  if (msg?.type === "GIF_PROGRESS") {
+    setJob({ progress: msg.text });
+    return false;
+  }
   if (msg?.type !== "SEARCH_YOUTUBE") return false;
   searchViaYouTubeTab(msg.query || "", msg.limit || 3)
     .then((videos) => sendResponse({ ok: true, videos }))
