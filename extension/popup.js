@@ -401,7 +401,8 @@ function showGifJob(job) {
 }
 
 function showLink(url, note) {
-  els.gifLink.classList.remove("hidden");
+  els.gifLink.classList.remove("hidden", "error");
+  els.gifLink.classList.add("toast-ok");
   els.gifLink.textContent = "";
   const a = document.createElement("a");
   a.href = url;
