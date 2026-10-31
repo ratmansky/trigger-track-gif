@@ -398,7 +398,7 @@ function showGifJob(job) {
   els.gifActions.classList.remove("hidden");
   els.uploadGif.classList.toggle("hidden", Boolean(job.link));
   els.downloadGif.classList.remove("hidden");
-  if (job.link) showLink(job.link, job.linkNote);
+  if (job.link) showLink(job.chatLine || job.link, job.linkNote);
 }
 
 function showLink(url, note) {
@@ -478,19 +478,31 @@ async function findTriggerTab() {
   );
 }
 
-// Trigger's «Вставить картинку» just sends the image URL as a chat message.
-// We put the URL into the chat input; the user presses «Отправить».
-async function insertIntoTriggerChat(url) {
+/** Chat line that Trigger renders as text + GIF: "Artist - Title https://….gif" */
+function chatLineFor(track, url) {
+  const label = (
+    track?.raw ||
+    [track?.artist, track?.title].filter(Boolean).join(" - ") ||
+    ""
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+  return label ? `${label} ${url}` : url;
+}
+
+// Trigger's «Вставить картинку» = URL in a normal message; MessageParser shows .gif as <img>.
+// Prefixed label works: "track/artist  <gif-url>".
+async function insertIntoTriggerChat(text) {
   const tab = await findTriggerTab();
   if (!tab) return { ok: false, error: "Вкладка Trigger не открыта" };
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    args: [url],
-    func: (text) => {
+    args: [text],
+    func: (payload) => {
       const input = document.getElementById("message-input");
       if (!input) return { ok: false, error: "Поле чата не найдено (залогинен?)" };
       const current = input.value.trim();
-      input.value = current ? `${current} ${text}` : text;
+      input.value = current ? `${current} ${payload}` : payload;
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.focus();
       return { ok: true };
@@ -512,9 +524,10 @@ els.uploadGif.addEventListener("click", async () => {
   uploadLoader.start("Заливаю гифку на хостинг");
   try {
     const link = await uploadGifHost(gifJob.result.dataUrl, fileNameFor(gifJob));
-    uploadLoader.setText("Вставляю ссылку в чат Trigger");
+    const chatLine = chatLineFor(gifJob.track || currentTrack, link);
+    uploadLoader.setText("Вставляю в чат Trigger");
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(chatLine);
     } catch {
       /* clipboard is a bonus */
     }
@@ -522,17 +535,18 @@ els.uploadGif.addEventListener("click", async () => {
     gifJob = {
       ...gifJob,
       link,
-      linkNote: "В поле чата Trigger — жми «Отправить». Ссылка:",
+      chatLine,
+      linkNote: "В поле чата Trigger — жми «Отправить»:",
     };
     await chrome.storage.local.set({ gifJob });
-    const inserted = await insertIntoTriggerChat(link).catch((err) => ({
+    const inserted = await insertIntoTriggerChat(chatLine).catch((err) => ({
       ok: false,
       error: err?.message || String(err),
     }));
     if (!inserted.ok) {
       gifJob = {
         ...gifJob,
-        linkNote: `${inserted.error}. Ссылка скопирована — вставь в чат:`,
+        linkNote: `${inserted.error}. Скопировано — вставь в чат:`,
       };
       await chrome.storage.local.set({ gifJob });
     }
