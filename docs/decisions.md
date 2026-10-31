@@ -40,5 +40,6 @@ DOM (player-bar / landing) — запасной и для сверки «как 
 
 ### Этап B — YouTube выдача
 Показываем **2–3** ролика из поиска `artist + title`.  
-Без Google API key: YouTube InnerTube `youtubei/v1/search`.  
-Клик = выбор (кладём в `chrome.storage.session` для следующих этапов).
+Прямой fetch из popup → **403** (YouTube режет origin расширения).  
+Поиск идёт через **скрытую вкладку youtube.com** + InnerTube в контексте страницы, вкладка закрывается.  
+Клик = выбор (`chrome.storage.session`).

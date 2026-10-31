@@ -154,7 +154,7 @@ async function loadYouTube(track) {
   els.picked.classList.add("hidden");
   els.ytList.innerHTML = "";
   els.ytState.classList.remove("error");
-  els.ytState.textContent = "Ищу на YouTube…";
+  els.ytState.textContent = "Ищу на YouTube… (мигнёт фоновая вкладка — так надо)";
 
   const query = searchQueryFor(track);
   try {
