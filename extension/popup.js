@@ -1,4 +1,9 @@
+const MAX_DURATION = 8;
+const DEFAULT_DURATION = 3;
+
 const els = {
+  badge: document.getElementById("badge"),
+  hint: document.getElementById("hint"),
   state: document.getElementById("state"),
   card: document.getElementById("card"),
   cover: document.getElementById("cover"),
@@ -9,11 +14,21 @@ const els = {
   ytBlock: document.getElementById("ytBlock"),
   ytState: document.getElementById("ytState"),
   ytList: document.getElementById("ytList"),
-  picked: document.getElementById("picked"),
+  cropBlock: document.getElementById("cropBlock"),
+  cropThumb: document.getElementById("cropThumb"),
+  cropTitle: document.getElementById("cropTitle"),
+  cropChannel: document.getElementById("cropChannel"),
+  startSec: document.getElementById("startSec"),
+  durationSec: document.getElementById("durationSec"),
+  previewCrop: document.getElementById("previewCrop"),
+  saveCrop: document.getElementById("saveCrop"),
+  backToList: document.getElementById("backToList"),
+  cropSaved: document.getElementById("cropSaved"),
 };
 
 let currentTrack = null;
-let selectedVideoId = null;
+let selectedVideo = null;
+let lastVideos = [];
 
 function showError(message) {
   els.state.classList.remove("hidden");
@@ -21,6 +36,7 @@ function showError(message) {
   els.state.textContent = message;
   els.card.classList.add("hidden");
   els.ytBlock.classList.add("hidden");
+  els.cropBlock.classList.add("hidden");
 }
 
 function showTrack(track) {
@@ -105,13 +121,28 @@ function searchQueryFor(track) {
   return [track.artist, track.title].filter(Boolean).join(" ").trim();
 }
 
+function setStep(step) {
+  if (step === "list") {
+    els.badge.textContent = "этап B";
+    els.hint.textContent = "Кликни ролик — кроп откроется здесь же.";
+    els.ytBlock.classList.remove("hidden");
+    els.cropBlock.classList.add("hidden");
+  } else if (step === "crop") {
+    els.badge.textContent = "этап D";
+    els.hint.textContent = "Выставь отрезок. Превью откроет YouTube с нужной секунды.";
+    els.ytBlock.classList.add("hidden");
+    els.cropBlock.classList.remove("hidden");
+  }
+}
+
 function renderVideos(videos) {
   els.ytList.innerHTML = "";
   for (const video of videos) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className =
-      "yt-item" + (video.videoId === selectedVideoId ? " selected" : "");
+      "yt-item" +
+      (video.videoId === selectedVideo?.videoId ? " selected" : "");
     btn.innerHTML = `
       <img class="yt-thumb" alt="" width="88" height="50" />
       <div class="yt-meta">
@@ -123,39 +154,58 @@ function renderVideos(videos) {
     img.src = video.thumbUrl || "";
     btn.querySelector(".yt-title").textContent = video.title || video.videoId;
     btn.querySelector(".yt-channel").textContent = video.channel || "YouTube";
-    btn.addEventListener("click", () => selectVideo(video, videos));
+    btn.addEventListener("click", () => selectVideo(video));
     els.ytList.appendChild(btn);
   }
 }
 
-async function selectVideo(video, videos) {
-  selectedVideoId = video.videoId;
-  renderVideos(videos);
-  els.picked.classList.remove("hidden");
-  els.picked.textContent = `Выбрано: ${video.title} — открываю кроп…`;
-  await chrome.storage.session.set({
-    selectedVideo: {
-      ...video,
-      track: currentTrack
-        ? {
-            artist: currentTrack.artist,
-            title: currentTrack.title,
-            raw: currentTrack.raw,
-            songStatsId: currentTrack.songStatsId,
-          }
-        : null,
-      pickedAt: Date.now(),
-    },
-  });
-  await chrome.tabs.create({
-    url: chrome.runtime.getURL("crop.html"),
-    active: true,
-  });
+function clampRange() {
+  let start = Number(els.startSec.value);
+  let duration = Number(els.durationSec.value);
+  if (!Number.isFinite(start) || start < 0) start = 0;
+  if (!Number.isFinite(duration) || duration < 1) duration = DEFAULT_DURATION;
+  if (duration > MAX_DURATION) duration = MAX_DURATION;
+  els.startSec.value = String(start);
+  els.durationSec.value = String(duration);
+  return { start, duration, end: start + duration };
+}
+
+function showCrop(video) {
+  selectedVideo = video;
+  els.cropThumb.src = video.thumbUrl || "";
+  els.cropTitle.textContent = video.title || video.videoId;
+  els.cropChannel.textContent = video.channel || "YouTube";
+  els.startSec.value = String(video.crop?.startSec ?? 0);
+  els.durationSec.value = String(video.crop?.durationSec ?? DEFAULT_DURATION);
+  els.cropSaved.classList.add("hidden");
+  if (video.crop) {
+    els.cropSaved.classList.remove("hidden");
+    els.cropSaved.textContent = `Уже сохранён: ${video.crop.startSec}s → ${video.crop.endSec}s`;
+  }
+  setStep("crop");
+}
+
+async function selectVideo(video) {
+  const payload = {
+    ...video,
+    track: currentTrack
+      ? {
+          artist: currentTrack.artist,
+          title: currentTrack.title,
+          raw: currentTrack.raw,
+          songStatsId: currentTrack.songStatsId,
+        }
+      : null,
+    pickedAt: Date.now(),
+  };
+  selectedVideo = payload;
+  await chrome.storage.session.set({ selectedVideo: payload });
+  showCrop(payload);
 }
 
 async function loadYouTube(track) {
+  setStep("list");
   els.ytBlock.classList.remove("hidden");
-  els.picked.classList.add("hidden");
   els.ytList.innerHTML = "";
   els.ytState.classList.remove("error");
   els.ytState.textContent = "Ищу на YouTube… (мигнёт фоновая вкладка — так надо)";
@@ -163,6 +213,7 @@ async function loadYouTube(track) {
   const query = searchQueryFor(track);
   try {
     const videos = await searchYouTubeVideos(query, 3);
+    lastVideos = videos;
     if (!videos.length) {
       els.ytState.classList.add("error");
       els.ytState.textContent = `Ничего не нашли по «${query}».`;
@@ -177,11 +228,14 @@ async function loadYouTube(track) {
 }
 
 async function refresh() {
-  selectedVideoId = null;
+  selectedVideo = null;
+  lastVideos = [];
   els.state.classList.remove("hidden", "error");
   els.state.textContent = "Читаю трек с Trigger…";
   els.card.classList.add("hidden");
   els.ytBlock.classList.add("hidden");
+  els.cropBlock.classList.add("hidden");
+  els.badge.textContent = "этап A";
 
   try {
     const track = await fetchFromApi();
@@ -210,8 +264,42 @@ async function refresh() {
   }
 }
 
+els.previewCrop.addEventListener("click", async () => {
+  if (!selectedVideo?.videoId) return;
+  const range = clampRange();
+  const t = Math.floor(range.start);
+  const url = `https://www.youtube.com/watch?v=${encodeURIComponent(selectedVideo.videoId)}&t=${t}s`;
+  await chrome.tabs.create({ url, active: true });
+});
+
+els.saveCrop.addEventListener("click", async () => {
+  if (!selectedVideo?.videoId) return;
+  const range = clampRange();
+  const crop = {
+    startSec: range.start,
+    durationSec: range.duration,
+    endSec: range.end,
+    savedAt: Date.now(),
+  };
+  selectedVideo = { ...selectedVideo, crop };
+  await chrome.storage.session.set({ selectedVideo });
+  els.cropSaved.classList.remove("hidden");
+  els.cropSaved.textContent = `Отрезок сохранён: ${range.start}s → ${range.end}s (${range.duration} сек). Дальше — вырезание файла.`;
+});
+
+els.backToList.addEventListener("click", () => {
+  els.cropSaved.classList.add("hidden");
+  setStep("list");
+  if (lastVideos.length) renderVideos(lastVideos);
+});
+
 els.refresh.addEventListener("click", () => {
   refresh();
+});
+
+["change", "input"].forEach((evt) => {
+  els.startSec.addEventListener(evt, () => clampRange());
+  els.durationSec.addEventListener(evt, () => clampRange());
 });
 
 refresh();

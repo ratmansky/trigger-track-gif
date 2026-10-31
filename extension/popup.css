@@ -27,6 +27,10 @@ header {
   font-size: 12px;
 }
 
+.hint.tight {
+  margin: 0 0 8px;
+}
+
 .state {
   padding: 10px;
   border-radius: 8px;
@@ -79,7 +83,8 @@ header {
   color: #888;
 }
 
-.yt-block {
+.yt-block,
+.crop-block {
   margin-bottom: 10px;
 }
 
@@ -132,7 +137,8 @@ header {
   background: #f3f3f3;
 }
 
-.yt-thumb {
+.yt-thumb,
+.crop-thumb {
   width: 88px;
   height: 50px;
   object-fit: cover;
@@ -141,11 +147,18 @@ header {
   flex-shrink: 0;
 }
 
-.yt-meta {
+.crop-thumb {
+  width: 120px;
+  height: 68px;
+}
+
+.yt-meta,
+.crop-meta {
   min-width: 0;
 }
 
-.yt-title {
+.yt-title,
+.crop-title {
   font-weight: 600;
   font-size: 12px;
   display: -webkit-box;
@@ -154,7 +167,8 @@ header {
   overflow: hidden;
 }
 
-.yt-channel {
+.yt-channel,
+.crop-channel {
   margin-top: 2px;
   font-size: 11px;
   color: #777;
@@ -163,15 +177,54 @@ header {
   text-overflow: ellipsis;
 }
 
-.picked {
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 8px;
-  background: #eef7ee;
-  color: #1f5a1f;
-  font-size: 12px;
+.crop-picked {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
 }
 
+.crop-note {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.35;
+}
+
+.crop-fields {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+}
+
+.field span {
+  font-size: 11px;
+  color: #666;
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.crop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.crop-actions button,
 button#refresh {
   width: 100%;
   padding: 8px 10px;
@@ -179,8 +232,34 @@ button#refresh {
   border-radius: 6px;
   background: #fff;
   cursor: pointer;
+  font: inherit;
 }
 
+.crop-actions button:hover,
 button#refresh:hover {
   background: #f7f7f7;
+}
+
+.crop-actions button.primary {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.crop-actions button.primary:hover {
+  background: #333;
+}
+
+.crop-actions button.ghost {
+  border-style: dashed;
+  color: #555;
+}
+
+.picked {
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: #eef7ee;
+  color: #1f5a1f;
+  font-size: 12px;
 }
