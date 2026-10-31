@@ -229,8 +229,17 @@ async function makeGif({ video, crop, track }) {
     },
   });
 
-  // Keep the service worker awake while we wait on the tab.
-  const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo(), 15000);
+  // MV3: popup closes when YouTube opens — can't keep SW alive via sendResponse.
+  // Alarms + capture port (see onConnect) keep us running.
+  const alarmName = `ttg-gif-${Date.now()}`;
+  const ping = () => chrome.runtime.getPlatformInfo().catch(() => {});
+  const keepAlive = setInterval(ping, 5000);
+  try {
+    await chrome.alarms.create(alarmName, { periodInMinutes: 0.5 });
+  } catch {
+    /* alarms optional */
+  }
+
   let tab = null;
   let qualityPref = null;
   try {
@@ -243,20 +252,21 @@ async function makeGif({ video, crop, track }) {
     await chrome.tabs.update(tab.id, { muted: true, active: true });
     await waitTabComplete(tab.id, 45000);
     // Let the player boot before we poke it.
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 1500));
     qualityPref = await forceLowQuality(tab.id);
 
     // Stay on the YouTube tab for the whole capture (no popup mid-flight).
     const focusPulse = setInterval(() => {
       chrome.tabs.update(tab.id, { active: true }).catch(() => {});
-    }, 4000);
+      chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
+    }, 3000);
 
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ["vendor/gifenc.js", "capture.js"],
       });
-      await setJob({ progress: "Снимаю кадры (можно не трогать вкладку)" });
+      await setJob({ progress: "Снимаю кадры (не трогай вкладку YouTube)" });
       const [{ result }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         args: [{ start: crop.startSec, duration: crop.durationSec }],
@@ -289,6 +299,11 @@ async function makeGif({ video, crop, track }) {
     await setJob({ status: "error", error: err?.message || String(err) });
   } finally {
     clearInterval(keepAlive);
+    try {
+      await chrome.alarms.clear(alarmName);
+    } catch {
+      /* ignore */
+    }
     if (tab) {
       await restoreQualityPref(tab.id, qualityPref);
       try {
@@ -298,6 +313,13 @@ async function makeGif({ video, crop, track }) {
       }
     }
     try {
+      await chrome.action.setBadgeText({ text: "OK" });
+      await chrome.action.setBadgeBackgroundColor({ color: "#1b5e20" });
+      setTimeout(() => chrome.action.setBadgeText({ text: "" }), 8000);
+    } catch {
+      /* ignore */
+    }
+    try {
       await chrome.action.openPopup();
     } catch {
       /* no focused window — user opens the popup by hand */
@@ -305,15 +327,32 @@ async function makeGif({ video, crop, track }) {
   }
 }
 
+// Long-lived port from the YouTube capture tab keeps the SW alive (MV3).
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "ttg-capture") return;
+  port.onMessage.addListener((msg) => {
+    if (msg?.type === "GIF_PROGRESS" && msg.text) {
+      setJob({ progress: msg.text });
+    }
+  });
+});
+
+chrome.alarms.onAlarm.addListener(() => {
+  // No-op: alarm tick alone restarts / keeps the worker for makeGif.
+});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "MAKE_GIF") {
-    // Keep the worker alive for the async job (MV3).
-    makeGif(msg)
-      .then(() => sendResponse({ ok: true }))
-      .catch((err) =>
-        sendResponse({ ok: false, error: err?.message || String(err) }),
-      );
-    return true;
+    // Reply immediately — popup will close when the YouTube tab opens.
+    // Awaiting here caused "message port closed" and killed the job.
+    sendResponse({ ok: true, started: true });
+    makeGif(msg).catch(async (err) => {
+      await setJob({
+        status: "error",
+        error: err?.message || String(err),
+      });
+    });
+    return false;
   }
   if (msg?.type === "GIF_PROGRESS") {
     setJob({ progress: msg.text });

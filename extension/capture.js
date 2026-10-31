@@ -15,7 +15,20 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Keeps the MV3 service worker alive for the whole capture.
+  let port = null;
+  try {
+    port = chrome.runtime.connect({ name: "ttg-capture" });
+  } catch {
+    port = null;
+  }
+
   function progress(text) {
+    try {
+      port?.postMessage({ type: "GIF_PROGRESS", text });
+    } catch {
+      /* port gone */
+    }
     try {
       chrome.runtime.sendMessage({ type: "GIF_PROGRESS", text });
     } catch {
@@ -82,15 +95,25 @@
   async function seekTo(video, t) {
     const target = Math.min(
       Math.max(0, t),
-      Number.isFinite(video.duration) ? video.duration - 0.05 : t,
+      Number.isFinite(video.duration) ? Math.max(0, video.duration - 0.05) : t,
     );
-    if (Math.abs(video.currentTime - target) < 0.02 && video.readyState >= 2) {
+    if (Math.abs(video.currentTime - target) < 0.03 && video.readyState >= 2) {
       return;
     }
-    const seeked = once(video, "seeked", 12000);
-    video.currentTime = target;
-    await seeked;
-    await waitFor(() => video.readyState >= 2, 8000, "кадр после seek");
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const seeked = once(video, "seeked", 10000);
+        video.currentTime = target;
+        await seeked;
+        await waitFor(() => video.readyState >= 2, 6000, "кадр после seek");
+        return;
+      } catch (err) {
+        lastErr = err;
+        await sleep(250 * (attempt + 1));
+      }
+    }
+    throw lastErr || new Error("seek не удался");
   }
 
   function toDataUrl(bytes) {
@@ -204,6 +227,11 @@
         endSec: end,
       };
       await chrome.storage.local.set({ gifCaptureResult: result });
+      try {
+        port?.disconnect();
+      } catch {
+        /* ignore */
+      }
       return { ok: true, stored: true, frames: result.frames, bytes: result.bytes };
     } catch (err) {
       const message =
@@ -214,6 +242,11 @@
         await chrome.storage.local.set({
           gifCaptureResult: { ok: false, error: message },
         });
+      } catch {
+        /* ignore */
+      }
+      try {
+        port?.disconnect();
       } catch {
         /* ignore */
       }

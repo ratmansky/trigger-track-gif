@@ -236,6 +236,7 @@ function showCrop(video) {
   const start = video.crop?.startSec ?? DEFAULT_START;
   clip.set(start, video.crop?.endSec ?? start + DEFAULT_DURATION);
   els.cropSaved.classList.add("hidden");
+  els.saveCrop.disabled = false;
   setStep("crop");
   els.previewCrop.classList.add("hidden");
   els.loopBadge.classList.add("hidden");
@@ -590,7 +591,7 @@ els.saveCrop.addEventListener("click", async () => {
   await chrome.storage.session.set({ selectedVideo });
   els.saveCrop.disabled = true;
   showGifJob({ status: "working", progress: "Открываю YouTube" });
-  // The YouTube tab steals focus and closes this popup; the worker reopens it.
+  // YouTube tab steals focus → popup closes. Worker finishes alone and reopens us.
   try {
     await chrome.runtime.sendMessage({
       type: "MAKE_GIF",
@@ -604,10 +605,16 @@ els.saveCrop.addEventListener("click", async () => {
       track: currentTrack,
     });
   } catch (err) {
+    // "message port closed" is normal when the popup dies after tab open —
+    // only treat real failures as errors.
+    const msg = err?.message || String(err);
+    if (/message port closed|Receiving end does not exist/i.test(msg)) {
+      return;
+    }
     els.saveCrop.disabled = false;
     showGifJob({
       status: "error",
-      error: err?.message || String(err),
+      error: msg,
       video: selectedVideo,
       crop,
       track: currentTrack,
