@@ -157,6 +157,8 @@ function createCropPlayer(iframe, { onReady, onTime, onFail } = {}) {
         rel: "0",
         // Look like a GIF; scrubbing is our own slider.
         controls: "0",
+        disablekb: "1",
+        modestbranding: "1",
         iv_load_policy: "3",
         fs: "0",
         start: String(Math.floor(startSec)),

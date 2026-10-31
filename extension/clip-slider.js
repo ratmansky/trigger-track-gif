@@ -24,27 +24,37 @@ function createClipSlider(
 
   root.classList.add("clip-slider");
   root.innerHTML = `
-    <div class="clip-overview" title="Где в ролике">
-      <input class="clip-ov" type="range" step="0.1" />
-    </div>
-    <div class="clip-fine">
-      <div class="clip-track">
-        <div class="clip-fill"></div>
-        <div class="clip-playhead hidden"></div>
+    <div class="clip-section">
+      <div class="clip-section-label">Где в ролике</div>
+      <div class="clip-overview" title="Перетащи отрезок по ролику">
+        <input class="clip-ov" type="range" step="0.1" />
       </div>
-      <input class="clip-thumb clip-start" type="range" step="0.1" aria-label="Начало" />
-      <input class="clip-thumb clip-end" type="range" step="0.1" aria-label="Конец" />
     </div>
-    <div class="clip-labels">
-      <span class="clip-l-start"></span>
-      <span class="clip-l-len"></span>
-      <span class="clip-l-end"></span>
+    <div class="clip-section">
+      <div class="clip-section-label">Точный кроп · макс ${maxLen} сек</div>
+      <div class="clip-fine">
+        <div class="clip-track">
+          <div class="clip-dim clip-dim-l"></div>
+          <div class="clip-fill"></div>
+          <div class="clip-dim clip-dim-r"></div>
+          <div class="clip-playhead hidden"></div>
+        </div>
+        <input class="clip-thumb clip-start" type="range" step="0.1" aria-label="Начало" />
+        <input class="clip-thumb clip-end" type="range" step="0.1" aria-label="Конец" />
+      </div>
+      <div class="clip-labels">
+        <span class="clip-chip clip-l-start"></span>
+        <span class="clip-chip clip-chip-accent clip-l-len"></span>
+        <span class="clip-chip clip-l-end"></span>
+      </div>
     </div>
   `;
   const ov = root.querySelector(".clip-ov");
   const startIn = root.querySelector(".clip-start");
   const endIn = root.querySelector(".clip-end");
   const fill = root.querySelector(".clip-fill");
+  const dimL = root.querySelector(".clip-dim-l");
+  const dimR = root.querySelector(".clip-dim-r");
   const playhead = root.querySelector(".clip-playhead");
   const lStart = root.querySelector(".clip-l-start");
   const lLen = root.querySelector(".clip-l-len");
@@ -60,7 +70,11 @@ function createClipSlider(
   const pct = (t) => ((t - winStart) / win()) * 100;
 
   function recenter() {
-    winStart = clamp((start + end) / 2 - win() / 2, 0, Math.max(0, duration - win()));
+    winStart = clamp(
+      (start + end) / 2 - win() / 2,
+      0,
+      Math.max(0, duration - win()),
+    );
     winStart = Math.floor(winStart);
   }
 
@@ -76,8 +90,15 @@ function createClipSlider(
     ov.min = "0";
     ov.max = String(Math.max(0, duration - (end - start)));
     ov.value = String(start);
-    fill.style.left = `${pct(start)}%`;
-    fill.style.width = `${pct(end) - pct(start)}%`;
+
+    const left = pct(start);
+    const right = pct(end);
+    fill.style.left = `${left}%`;
+    fill.style.width = `${Math.max(0, right - left)}%`;
+    dimL.style.width = `${Math.max(0, left)}%`;
+    dimR.style.left = `${right}%`;
+    dimR.style.width = `${Math.max(0, 100 - right)}%`;
+
     lStart.textContent = formatClock(start);
     lEnd.textContent = formatClock(end);
     lLen.textContent = `${(end - start).toFixed(1)} сек`;
@@ -111,8 +132,6 @@ function createClipSlider(
     emit();
   });
 
-  // After letting go near the window edge, slide the window so there is
-  // room to keep going.
   function maybeRecenter() {
     const edge = win() * 0.1;
     if (start < winStart + edge || end > winStart + win() - edge) {

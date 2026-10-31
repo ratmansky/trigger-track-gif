@@ -48,9 +48,10 @@
       <div id="ytList" class="yt-list"></div>
     </section>
 
-    <section id="cropBlock" class="panel hidden">
+    <section id="cropBlock" class="panel panel-crop hidden">
       <div class="panel-head">
         <h2 class="panel-title">Отрезок</h2>
+        <span class="panel-kicker">live preview</span>
       </div>
       <div class="crop-meta tight-meta">
         <div id="cropTitle" class="crop-title"></div>
@@ -67,13 +68,15 @@
       </div>
       <p id="playerNote" class="crop-note hidden"></p>
       <div id="clipSlider"></div>
-      <p class="hint tight">
-        Тяни края. В превью крутится ровно то, что попадёт в гифку (макс 6 сек).
+      <p class="hint tight crop-hint">
+        Тяни круглые ручки. Превью крутит ровно будущую гифку.
       </p>
-      <div class="actions">
+      <div class="actions actions-crop">
         <button id="saveCrop" type="button" class="btn btn-primary">Сделать гифку</button>
-        <button id="previewCrop" type="button" class="btn btn-secondary">Превью на YouTube</button>
-        <button id="backToList" type="button" class="btn btn-ghost">Другой ролик</button>
+        <div class="actions-row">
+          <button id="previewCrop" type="button" class="btn btn-secondary">Превью на YouTube</button>
+          <button id="backToList" type="button" class="btn btn-ghost">Другой ролик</button>
+        </div>
       </div>
       <p id="cropSaved" class="toast toast-ok hidden"></p>
     </section>
